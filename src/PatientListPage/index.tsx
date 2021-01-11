@@ -1,21 +1,24 @@
 import React from "react";
 import axios from "axios";
 import { Container, Table, Button } from "semantic-ui-react";
+import { Link } from 'react-router-dom';
 
 import { PatientFormValues } from "../AddPatientModal/AddPatientForm";
 import AddPatientModal from "../AddPatientModal";
 import { Patient } from "../types";
 import { apiBaseUrl } from "../constants";
 import HealthRatingBar from "../components/HealthRatingBar";
-import { useStateValue } from "../state";
+import { useStateValue, addPatient } from "../state";
 
 const PatientListPage: React.FC = () => {
   const [{ patients }, dispatch] = useStateValue();
 
   const [modalOpen, setModalOpen] = React.useState<boolean>(false);
+  const [showText, setShowText] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | undefined>();
 
   const openModal = (): void => setModalOpen(true);
+  const toggleText = (): void => setShowText(!showText);
 
   const closeModal = (): void => {
     setModalOpen(false);
@@ -28,7 +31,7 @@ const PatientListPage: React.FC = () => {
         `${apiBaseUrl}/patients`,
         values
       );
-      dispatch({ type: "ADD_PATIENT", payload: newPatient });
+      dispatch(addPatient(newPatient));
       closeModal();
     } catch (e) {
       console.error(e.response.data);
@@ -53,12 +56,16 @@ const PatientListPage: React.FC = () => {
         <Table.Body>
           {Object.values(patients).map((patient: Patient) => (
             <Table.Row key={patient.id}>
-              <Table.Cell>{patient.name}</Table.Cell>
-              <Table.Cell>{patient.gender}</Table.Cell>
-              <Table.Cell>{patient.occupation}</Table.Cell>
-              <Table.Cell>
-                <HealthRatingBar showText={false} rating={1} />
-              </Table.Cell>
+                <Table.Cell>              
+                  <Link to={`/patients/${patient.id}`}>
+                    {patient.name}
+                  </Link>
+                </Table.Cell>
+                <Table.Cell>{patient.gender}</Table.Cell>
+                <Table.Cell>{patient.occupation}</Table.Cell>
+                <Table.Cell>
+                  <HealthRatingBar showText={showText} rating={1} />
+                </Table.Cell>
             </Table.Row>
           ))}
         </Table.Body>
@@ -70,6 +77,8 @@ const PatientListPage: React.FC = () => {
         onClose={closeModal}
       />
       <Button onClick={() => openModal()}>Add New Patient</Button>
+      <Button onClick={() => toggleText()}>{ showText ? 'Hide' : 'Show' } Text</Button>
+
     </div>
   );
 };
