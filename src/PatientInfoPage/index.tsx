@@ -3,10 +3,15 @@ import { useParams } from "react-router-dom";
 import { Icon, CardGroup } from 'semantic-ui-react';
 
 import axios from "axios";
-import { Patient, Gender } from "../types";
+import { Patient, Gender, Entry } from "../types";
 import { apiBaseUrl } from "../constants";
-import { useStateValue, updatePatientFullData } from "../state";
 import { EntryDetails } from "./entrydetails";
+import AddEntryModal from "../AddEntryModal";
+import { useStateValue, updatePatientFullData, addDiagnosisEntry } from "../state";
+
+import { Button } from 'semantic-ui-react';
+import { DiagnosisEntryValues } from "../AddEntryModal/AddEntryForm";
+
 
 const GenderIcon = ({ gender }: { gender: Gender }) => {
   switch (gender) {
@@ -22,13 +27,22 @@ const PatientInfoPage: React.FC = () => {
   const [{ patientsFullData, diagnoses }, dispatch] = useStateValue();
   const { id } = useParams<{ id: string }>();
 
+  const [modalOpen, setModalOpen] = React.useState<boolean>(false);
+  const [error, setError] = React.useState<string | undefined>("");
+
+  const openModal = (): void => setModalOpen(true);
+  const closeModal = (): void => {
+    setModalOpen(false);
+    setError(undefined);
+  };
+
   React.useEffect(() => {
     const fetchPatientRecord = async () => {
       try {
         const { data: patientData } = await axios.get<Patient>(
           `${apiBaseUrl}/patients/${id}`
         );
-        dispatch(updatePatientFullData(patientData))
+        dispatch(updatePatientFullData(patientData));
       } catch (e) {
         console.error(e);
       }
@@ -37,6 +51,20 @@ const PatientInfoPage: React.FC = () => {
       fetchPatientRecord();
     }
   }, [id, patientsFullData, diagnoses, dispatch]);
+
+  const submitNewEntry = async (values: DiagnosisEntryValues) => {
+    try {
+      const { data: newEntry } = await axios.post<Entry>(
+        `${apiBaseUrl}/patients/${id}/entries`,
+        values
+      );
+      dispatch(addDiagnosisEntry(id, newEntry));
+      closeModal();
+    } catch (e) {
+      console.error(e.response.data);
+      setError(e.response.data.error);
+    }
+  };
 
   const patient = patientsFullData[id];
   return (
@@ -48,7 +76,8 @@ const PatientInfoPage: React.FC = () => {
             ssn: { patient.ssn } <br />
             occupation: { patient.occupation } <br />
             date of birth: { patient.dateOfBirth } <br />
-          </p>          
+          </p>
+          
           { patient.entries && 
             <div>
               <p><b>Entries</b></p>
@@ -59,6 +88,14 @@ const PatientInfoPage: React.FC = () => {
               </CardGroup>
             </div>
           }
+          <AddEntryModal 
+            modalOpen={modalOpen}
+            onSubmit={submitNewEntry}
+            error={error}
+            onClose={closeModal}
+          />
+          <br />
+          <Button onClick={() => openModal()}>Add New Entry</Button>
         </div>
     }
     </div>
